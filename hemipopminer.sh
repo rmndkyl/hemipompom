@@ -12,7 +12,6 @@ install_dependencies() {
         if ! command -v $cmd &> /dev/null; then
             echo "$cmd is not installed. Installing $cmd..."
 
-            # Detect the OS type and execute the corresponding installation command
             if [[ "$OSTYPE" == "linux-gnu"* ]]; then
                 sudo apt update
                 sudo apt install -y $cmd
@@ -108,26 +107,36 @@ download_and_setup() {
     ./keygen -secp256k1 -json -net="testnet" > ~/popm-address.json
 }
 
-# Function 2: Set environment variables
+# Function 2: Set environment variables for multiple instances
 setup_environment() {
     cd "$HOME/heminetwork"
     cat ~/popm-address.json
 
-    # Prompt user for private_key and sats/vB values
-    read -p "Enter the private_key value: " POPM_BTC_PRIVKEY
-    read -p "Enter the sats/vB value: " POPM_STATIC_FEE
+    # Prompt user for multiple private_keys and sats/vB values
+    while true; do
+        read -p "Enter the private_key value (or type 'done' to finish): " POPM_BTC_PRIVKEY
+        if [[ "$POPM_BTC_PRIVKEY" == "done" ]]; then
+            break
+        fi
 
-    export POPM_BTC_PRIVKEY=$POPM_BTC_PRIVKEY
-    export POPM_STATIC_FEE=$POPM_STATIC_FEE
+        read -p "Enter the sats/vB value: " POPM_STATIC_FEE
+        PRIVATE_KEYS+=("$POPM_BTC_PRIVKEY")
+        STATIC_FEES+=("$POPM_STATIC_FEE")
+    done
+
     export POPM_BFG_URL=wss://testnet.rpc.hemi.network/v1/ws/public
 }
 
-# Function 3: Start popmd using pm2
+# Function 3: Start multiple popmd instances using pm2
 start_popmd() {
     cd "$HOME/heminetwork"
-    pm2 start ./popmd --name popmd
+    for i in "${!PRIVATE_KEYS[@]}"; do
+        export POPM_BTC_PRIVKEY="${PRIVATE_KEYS[$i]}"
+        export POPM_STATIC_FEE="${STATIC_FEES[$i]}"
+        pm2 start ./popmd --name "popmd_$i" --update-env
+    done
     pm2 save
-    echo "popmd has been started with pm2."
+    echo "popmd instances have been started with pm2."
 }
 
 # Function 4: Backup popm-address.json
@@ -139,7 +148,9 @@ backup_address() {
 # Function 5: View logs
 view_logs() {
     cd "$HOME/heminetwork"
-    pm2 logs popmd
+    for i in "${!PRIVATE_KEYS[@]}"; do
+        pm2 logs "popmd_$i"
+    done
 }
 
 # Main menu
