@@ -6,14 +6,20 @@ wget -O loader.sh https://raw.githubusercontent.com/rmndkyl/MandaNode/main/WM/lo
 wget -O logo.sh https://raw.githubusercontent.com/rmndkyl/MandaNode/main/WM/logo.sh && chmod +x logo.sh && sed -i 's/\r$//' logo.sh && ./logo.sh
 sleep 4
 
-# Function: Automatically install missing dependencies (git and make)
+# Script save path
+SCRIPT_PATH="$HOME/Hemi.sh"
+
+# Automatically install missing dependencies (git, make, and jq)
 install_dependencies() {
-    for cmd in git make; do
+    echo "Updating package list..."
+    sudo apt update
+
+    for cmd in git make jq; do
         if ! command -v $cmd &> /dev/null; then
             echo "$cmd is not installed. Installing $cmd..."
 
+            # Detect the OS type and run the appropriate install command
             if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                sudo apt update
                 sudo apt install -y $cmd
             elif [[ "$OSTYPE" == "darwin"* ]]; then
                 brew install $cmd
@@ -26,7 +32,7 @@ install_dependencies() {
     echo "All dependencies have been installed."
 }
 
-# Function: Check if Go version >= 1.22.2
+# Check if Go version is >= 1.22.2
 check_go_version() {
     if command -v go >/dev/null 2>&1; then
         CURRENT_GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
@@ -53,7 +59,7 @@ install_go() {
     echo "Go installation completed, version: $(go version)"
 }
 
-# Function: Check and install Node.js and npm
+# Check and install Node.js and npm
 install_node() {
     echo "npm is not installed. Installing Node.js and npm..."
 
@@ -70,7 +76,7 @@ install_node() {
     echo "Node.js and npm installation completed."
 }
 
-# Function: Install pm2
+# Install pm2
 install_pm2() {
     if ! command -v npm &> /dev/null; then
         echo "npm is not installed."
@@ -85,75 +91,184 @@ install_pm2() {
     fi
 }
 
-# Check and automatically install git, make, and Go
-install_dependencies
-check_go_version
-install_pm2
+# Generate key and install dependencies
+generate_key() {
+    install_dependencies
+    check_go_version
+    install_pm2
 
-# Function 1: Download, extract, and run help command
-download_and_setup() {
-    wget https://github.com/hemilabs/heminetwork/releases/download/v0.3.2/heminetwork_v0.3.2_linux_amd64.tar.gz
+    URL="https://github.com/hemilabs/heminetwork/releases/download/v0.4.4/heminetwork_v0.4.4_linux_amd64.tar.gz"
+    FILENAME="heminetwork_v0.4.4_linux_amd64.tar.gz"
+    DIRECTORY="/root/heminetwork_v0.4.4_linux_amd64"
+    OUTPUT_FILE="$HOME/popm-address.json"
 
-    # Create target directory (if not exists)
-    TARGET_DIR="$HOME/heminetwork"
-    mkdir -p "$TARGET_DIR"
+    echo "Downloading $FILENAME..."
+    wget -q "$URL" -O "$FILENAME"
 
-    # Extract files to target directory
-    tar -xvf heminetwork_v0.3.2_linux_amd64.tar.gz -C "$TARGET_DIR"
+    if [ $? -eq 0 ]; then
+        echo "Download complete."
+    else
+        echo "Download failed."
+        exit 1
+    fi
 
-    # Change to target directory
-    cd "$TARGET_DIR"
-    ./popmd --help
-    ./keygen -secp256k1 -json -net="testnet" > ~/popm-address.json
+    echo "Extracting $FILENAME..."
+    tar -xzf "$FILENAME" -C /root
+
+    if [ $? -eq 0 ]; then
+        echo "Extraction complete."
+    else
+        echo "Extraction failed."
+        exit 1
+    fi
+
+    echo "Removing archive..."
+    rm -rf "$FILENAME"
+
+    echo "Entering directory $DIRECTORY..."
+    cd "$DIRECTORY" || { echo "Directory $DIRECTORY does not exist."; exit 1; }
+
+    # Check and set permissions for keygen
+    if [ -f "keygen" ]; then
+        chmod +x "keygen"
+    else
+        echo "keygen file not found."
+        exit 1
+    fi
+    
+    echo "Generating public key..."
+    ./keygen -secp256k1 -json -net="testnet" > "$OUTPUT_FILE"
+
+    echo "Public key generated. Output file: $OUTPUT_FILE"
+    echo "Displaying the contents of the key file..."
+    cat "$OUTPUT_FILE"
+
+    echo "Press any key to return to the main menu..."
+    read -n 1 -s
 }
 
-# Function 2: Set environment variables for multiple instances
-setup_environment() {
-    cd "$HOME/heminetwork"
-    cat ~/popm-address.json
+# Run node function
+run_node() {
+    DIRECTORY="$HOME/heminetwork_v0.4.4_linux_amd64"
 
-    # Prompt user for multiple private_keys and sats/vB values
-    while true; do
-        read -p "Enter the private_key value (or type 'done' to finish): " POPM_BTC_PRIVKEY
-        if [[ "$POPM_BTC_PRIVKEY" == "done" ]]; then
-            break
-        fi
+    echo "Entering directory $DIRECTORY..."
+    cd "$DIRECTORY" || { echo "Directory $DIRECTORY does not exist."; exit 1; }
 
-        read -p "Enter the sats/vB value: " POPM_STATIC_FEE
-        PRIVATE_KEYS+=("$POPM_BTC_PRIVKEY")
-        STATIC_FEES+=("$POPM_STATIC_FEE")
-    done
+    # Set popm-address.json file permissions to read-write
+    if [ -f "$HOME/popm-address.json" ]; then
+        echo "Setting permissions for popm-address.json file..."
+        chmod 600 "$HOME/popm-address.json"  # Read-write only for the current user
+    else
+        echo "$HOME/popm-address.json file does not exist."
+        exit 1
+    fi
 
-    export POPM_BFG_URL=wss://testnet.rpc.hemi.network/v1/ws/public
-}
+    # Display file contents
+    cat "$HOME/popm-address.json"
 
-# Function 3: Start multiple popmd instances using pm2
-start_popmd() {
-    cd "$HOME/heminetwork"
-    for i in "${!PRIVATE_KEYS[@]}"; do
-        export POPM_BTC_PRIVKEY="${PRIVATE_KEYS[$i]}"
-        export POPM_STATIC_FEE="${STATIC_FEES[$i]}"
-        pm2 start ./popmd --name "popmd_$i" --update-env
-    done
+    # Import private_key
+    POPM_BTC_PRIVKEY=$(jq -r '.private_key' "$HOME/popm-address.json")
+    read -p "Check the sats/vB value on https://mempool.space/testnet and input: " POPM_STATIC_FEE
+
+    export POPM_BTC_PRIVKEY=$POPM_BTC_PRIVKEY
+    export POPM_STATIC_FEE=$POPM_STATIC_FEE
+    export POPM_BFG_URL="wss://testnet.rpc.hemi.network/v1/ws/public"
+
+    echo "Starting node..."
+    pm2 start ./popmd --name popmd
     pm2 save
-    echo "popmd instances have been started with pm2."
+
+    echo "Press any key to return to the main menu..."
+    read -n 1 -s
 }
 
-# Function 4: Backup popm-address.json
-backup_address() {
-    echo "Please save the following locally:"
-    cat ~/popm-address.json
+# Upgrade version function
+upgrade_version() {
+    URL="https://github.com/hemilabs/heminetwork/releases/download/v0.4.4/heminetwork_v0.4.4_linux_amd64.tar.gz"
+    FILENAME="heminetwork_v0.4.3_linux_amd64.tar.gz"
+    DIRECTORY="/root/heminetwork_v0.4.3_linux_amd64"
+    ADDRESS_FILE="$HOME/popm-address.json"
+    BACKUP_FILE="$HOME/popm-address.json.bak"
+
+    echo "Backing up address.json file..."
+    if [ -f "$ADDRESS_FILE" ]; then
+        cp "$ADDRESS_FILE" "$BACKUP_FILE"
+        echo "Backup completed: $BACKUP_FILE"
+    else
+        echo "address.json file not found, unable to backup."
+    fi
+
+    echo "Downloading new version $FILENAME..."
+    wget -q "$URL" -O "$FILENAME"
+
+    if [ $? -eq 0 ]; then
+        echo "Download completed."
+    else
+        echo "Download failed."
+        exit 1
+    fi
+
+    echo "Deleting old version directory..."
+    rm -rf "$DIRECTORY"
+
+    echo "Extracting new version..."
+    tar -xzf "$FILENAME" -C /root
+
+    if [ $? -eq 0 ]; then
+        echo "Extraction completed."
+    else
+        echo "Extraction failed."
+        exit 1
+    fi
+
+    echo "Removing archive..."
+    rm -rf "$FILENAME"
+
+    # Restore address.json file
+    if [ -f "$BACKUP_FILE" ]; then
+        cp "$BACKUP_FILE" "$ADDRESS_FILE"
+        echo "Restored address.json file: $ADDRESS_FILE"
+    else
+        echo "Backup file does not exist, unable to restore."
+    fi
+
+    echo "Version upgrade completed!"
+    echo "Press any key to return to the main menu..."
+    read -n 1 -s
 }
 
-# Function 5: View logs
+# Backup address.json function
+backup_address_json() {
+    ADDRESS_FILE="$HOME/popm-address.json"
+    BACKUP_FILE="$HOME/popm-address.json.bak"
+
+    echo "Backing up address.json file..."
+    if [ -f "$ADDRESS_FILE" ]; then
+        cp "$ADDRESS_FILE" "$BACKUP_FILE"
+        echo "Backup completed: $BACKUP_FILE"
+    else
+        echo "address.json file not found, unable to backup."
+    fi
+
+    echo "Press any key to return to the main menu..."
+    read -n 1 -s
+}
+
+# View logs function
 view_logs() {
-    cd "$HOME/heminetwork"
-    for i in "${!PRIVATE_KEYS[@]}"; do
-        pm2 logs "popmd_$i"
-    done
+    DIRECTORY="heminetwork_v0.4.4_linux_amd64"
+
+    echo "Entering directory $DIRECTORY..."
+    cd "$HOME/$DIRECTORY" || { echo "Directory $DIRECTORY does not exist."; exit 1; }
+
+    echo "Viewing pm2 logs..."
+    pm2 logs popmd
+
+    echo "Press any key to return to the main menu..."
+    read -n 1 -s
 }
 
-# Main menu
+# Main menu function
 main_menu() {
     while true; do
         clear
@@ -161,42 +276,41 @@ main_menu() {
         echo "============================ Hemi Pop Miner Installation ===================================="
         echo "Node community Telegram channel: https://t.me/layerairdrop"
         echo "Node community Telegram group: https://t.me/layerairdropdiskusi"
-        echo "Please select an option:"
-        echo "1. Download and setup Heminetwork"
-        echo "2. Input private_key and sats/vB"
-        echo "3. Start popmd"
-        echo "4. Backup address information"
-        echo "5. View logs"
-        echo "6. Exit"
-
-        read -p "Enter your choice (1-6): " choice
+        echo "To exit the script, press ctrl + C on the keyboard to exit."
+        echo "Please select an operation to perform:"
+        echo "1) Generate Key"
+        echo "2) Run Node"
+        echo "3) Upgrade Version (0.4.4)"
+        echo "4) Backup address.json"
+        echo "5) View Logs"
+        echo "6) Exit"
+        read -p "Choose an option: " choice
 
         case $choice in
             1)
-                download_and_setup
+                generate_key
                 ;;
             2)
-                setup_environment
+                run_node
                 ;;
             3)
-                start_popmd
+                upgrade_version
                 ;;
             4)
-                backup_address
+                backup_address_json
                 ;;
             5)
                 view_logs
                 ;;
             6)
-                echo "Exiting the script."
                 exit 0
                 ;;
             *)
-                echo "Invalid option, please try again."
+                echo "Invalid option, please choose again."
                 ;;
         esac
     done
 }
 
-# Start main menu
+# Start the main menu
 main_menu
