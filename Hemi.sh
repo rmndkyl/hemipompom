@@ -97,9 +97,9 @@ generate_key() {
     check_go_version
     install_pm2
 
-    URL="https://github.com/hemilabs/heminetwork/releases/download/v0.4.4/heminetwork_v0.4.4_linux_amd64.tar.gz"
-    FILENAME="heminetwork_v0.4.4_linux_amd64.tar.gz"
-    DIRECTORY="/root/heminetwork_v0.4.4_linux_amd64"
+    URL="https://github.com/hemilabs/heminetwork/releases/download/v0.4.5/heminetwork_v0.4.5_linux_amd64.tar.gz"
+    FILENAME="heminetwork_v0.4.5_linux_amd64.tar.gz"
+    DIRECTORY="/root/heminetwork_v0.4.5_linux_amd64"
     OUTPUT_FILE="$HOME/popm-address.json"
 
     echo "Downloading $FILENAME..."
@@ -149,7 +149,7 @@ generate_key() {
 
 # Run node function
 run_node() {
-    DIRECTORY="$HOME/heminetwork_v0.4.4_linux_amd64"
+    DIRECTORY="$HOME/heminetwork_v0.4.5_linux_amd64"
 
     echo "Entering directory $DIRECTORY..."
     cd "$DIRECTORY" || { echo "Directory $DIRECTORY does not exist."; exit 1; }
@@ -184,7 +184,7 @@ run_node() {
 
 # Upgrade version function
 upgrade_version() {
-    URL="https://github.com/hemilabs/heminetwork/releases/download/v0.4.4/heminetwork_v0.4.4_linux_amd64.tar.gz"
+    URL="https://github.com/hemilabs/heminetwork/releases/download/v0.4.5/heminetwork_v0.4.5_linux_amd64.tar.gz"
     FILENAME="heminetwork_v0.4.3_linux_amd64.tar.gz"
     DIRECTORY="/root/heminetwork_v0.4.3_linux_amd64"
     ADDRESS_FILE="$HOME/popm-address.json"
@@ -256,7 +256,7 @@ backup_address_json() {
 
 # View logs function
 view_logs() {
-    DIRECTORY="heminetwork_v0.4.4_linux_amd64"
+    DIRECTORY="heminetwork_v0.4.5_linux_amd64"
 
     echo "Entering directory $DIRECTORY..."
     cd "$HOME/$DIRECTORY" || { echo "Directory $DIRECTORY does not exist."; exit 1; }
@@ -280,7 +280,7 @@ main_menu() {
         echo "Please select an operation to perform:"
         echo "1) Generate Key"
         echo "2) Run Node"
-        echo "3) Upgrade Version (0.4.4)"
+        echo "3) Upgrade Version (0.4.5)"
         echo "4) Backup address.json"
         echo "5) View Logs"
         echo "6) Exit"
