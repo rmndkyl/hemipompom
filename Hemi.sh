@@ -483,8 +483,8 @@ main_menu() {
         echo -e "${YELLOW}1) Generate Key/Wallet${NC}"
         echo -e "${YELLOW}2) Run Node${NC}"
         echo -e "${YELLOW}3) Backup/Export Wallet${NC}"
-		echo -e "${YELLOW}4) Import Wallet${NC}"
-		echo -e "${YELLOW}5) View Logs${NC}"
+	echo -e "${YELLOW}4) Import Wallet${NC}"
+	echo -e "${YELLOW}5) View Logs${NC}"
         echo -e "${YELLOW}6) Exit${NC}"
         read -p "Choose an option: " choice
 
