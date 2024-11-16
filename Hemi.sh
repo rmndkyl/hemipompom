@@ -1,256 +1,198 @@
 #!/bin/bash
 
-# Showing Logo
-echo "Showing Animation.."
-wget -O loader.sh https://raw.githubusercontent.com/rmndkyl/MandaNode/main/WM/loader.sh && chmod +x loader.sh && sed -i 's/\r$//' loader.sh && ./loader.sh
-wget -O logo.sh https://raw.githubusercontent.com/rmndkyl/MandaNode/main/WM/logo.sh && chmod +x logo.sh && sed -i 's/\r$//' logo.sh && ./logo.sh
-sleep 4
+# Color Codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
 
-# Script save path
-SCRIPT_PATH="$HOME/Hemi.sh"
+# Dynamic Variables
+HEMI_VERSION="v0.5.0"
+HEMI_URL="https://github.com/hemilabs/heminetwork/releases/download/$HEMI_VERSION/heminetwork_${HEMI_VERSION}_linux_amd64.tar.gz"
+HEMI_DIR="/root/heminetwork_${HEMI_VERSION}_linux_amd64"
+ADDRESS_FILE="$HOME/popm-address.json"
+BACKUP_FILE="$HOME/popm-address.json.bak"
+
+# Showing Logo
+echo -e "${CYAN}Showing Animation...${NC}"
+wget -q -O loader.sh https://raw.githubusercontent.com/rmndkyl/MandaNode/main/WM/loader.sh && chmod +x loader.sh && sed -i 's/\r$//' loader.sh && ./loader.sh
+rm -f loader.sh
+wget -q -O logo.sh https://raw.githubusercontent.com/rmndkyl/MandaNode/main/WM/logo.sh && chmod +x logo.sh && sed -i 's/\r$//' logo.sh && ./logo.sh
+rm -f logo.sh
+sleep 4
 
 # Automatically install missing dependencies (git, make, and jq)
 install_dependencies() {
-    echo "Updating package list..."
-    sudo apt update
+    echo -e "${CYAN}Checking and installing missing dependencies...${NC}"
+    dependencies=(git make jq)
 
-    for cmd in git make jq; do
-        if ! command -v $cmd &> /dev/null; then
-            echo "$cmd is not installed. Installing $cmd..."
-
-            # Detect the OS type and run the appropriate install command
-            if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-                sudo apt install -y $cmd
-            elif [[ "$OSTYPE" == "darwin"* ]]; then
-                brew install $cmd
-            else
-                echo "Unsupported OS. Please manually install $cmd."
-                exit 1
-            fi
+    for dep in "${dependencies[@]}"; do
+        if ! command -v $dep &> /dev/null; then
+            echo -e "${YELLOW}Installing missing dependency: $dep...${NC}"
+            sudo apt install -y $dep
+        else
+            echo -e "${GREEN}$dep is already installed.${NC}"
         fi
     done
-    echo "All dependencies have been installed."
+    echo -e "${GREEN}All dependencies are installed.${NC}"
 }
 
 # Check if Go version is >= 1.22.2
 check_go_version() {
-    if command -v go >/dev/null 2>&1; then
+    if command -v go &> /dev/null; then
         CURRENT_GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
         MINIMUM_GO_VERSION="1.22.2"
-
         if [ "$(printf '%s\n' "$MINIMUM_GO_VERSION" "$CURRENT_GO_VERSION" | sort -V | head -n1)" = "$MINIMUM_GO_VERSION" ]; then
-            echo "Current Go version meets the requirement: $CURRENT_GO_VERSION"
+            echo -e "${GREEN}Go version meets the requirement: $CURRENT_GO_VERSION${NC}"
         else
-            echo "Current Go version ($CURRENT_GO_VERSION) is below the required version ($MINIMUM_GO_VERSION). Installing the latest Go."
+            echo -e "${YELLOW}Go version ($CURRENT_GO_VERSION) is below the required version ($MINIMUM_GO_VERSION). Updating...${NC}"
             install_go
         fi
     else
-        echo "Go is not detected. Installing Go."
+        echo -e "${YELLOW}Go is not installed. Installing now...${NC}"
         install_go
     fi
 }
 
 install_go() {
-    wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz
+    echo -e "${CYAN}Installing Go...${NC}"
+    wget -q https://go.dev/dl/go1.22.2.linux-amd64.tar.gz
     sudo tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz
     export PATH=$PATH:/usr/local/go/bin
     echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
     source ~/.bashrc
-    echo "Go installation completed, version: $(go version)"
+    echo -e "${GREEN}Go installation completed: $(go version)${NC}"
 }
 
-# Check and install Node.js and npm
+# Install Node.js and npm
 install_node() {
-    echo "npm is not installed. Installing Node.js and npm..."
-
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    echo -e "${CYAN}Checking Node.js and npm installation...${NC}"
+    if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+        echo -e "${YELLOW}Installing Node.js and npm...${NC}"
         curl -fsSL https://deb.nodesource.com/setup_current.x | sudo -E bash -
-        sudo apt-get install -y nodejs
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        brew install node
+        sudo apt install -y nodejs
+        echo -e "${GREEN}Node.js and npm installed successfully.${NC}"
     else
-        echo "Unsupported OS. Please manually install Node.js and npm."
-        exit 1
+        echo -e "${GREEN}Node.js and npm are already installed.${NC}"
     fi
-
-    echo "Node.js and npm installation completed."
 }
 
 # Install pm2
 install_pm2() {
-    if ! command -v npm &> /dev/null; then
-        echo "npm is not installed."
-        install_node
-    fi
-
     if ! command -v pm2 &> /dev/null; then
-        echo "pm2 is not installed. Installing pm2..."
+        echo -e "${YELLOW}Installing pm2...${NC}"
         npm install -g pm2
     else
-        echo "pm2 is already installed."
+        echo -e "${GREEN}pm2 is already installed.${NC}"
     fi
 }
 
-# Generate key and install dependencies
+# Generate Key
 generate_key() {
     install_dependencies
     check_go_version
     install_pm2
 
-    URL="https://github.com/hemilabs/heminetwork/releases/download/v0.5.0/heminetwork_v0.5.0_linux_amd64.tar.gz"
-    FILENAME="heminetwork_v0.5.0_linux_amd64.tar.gz"
-    DIRECTORY="/root/heminetwork_v0.5.0_linux_amd64"
-    OUTPUT_FILE="$HOME/popm-address.json"
-
-    echo "Downloading $FILENAME..."
-    wget -q "$URL" -O "$FILENAME"
-
-    if [ $? -eq 0 ]; then
-        echo "Download complete."
-    else
-        echo "Download failed."
+    echo -e "${CYAN}Downloading Hemi Network files...${NC}"
+    wget -q "$HEMI_URL" -O "heminetwork_${HEMI_VERSION}_linux_amd64.tar.gz" || {
+        echo -e "${RED}Failed to download Hemi Network files.${NC}"
         exit 1
-    fi
+    }
 
-    echo "Extracting $FILENAME..."
-    tar -xzf "$FILENAME" -C /root
-
-    if [ $? -eq 0 ]; then
-        echo "Extraction complete."
-    else
-        echo "Extraction failed."
+    echo -e "${CYAN}Extracting files...${NC}"
+    tar -xzf "heminetwork_${HEMI_VERSION}_linux_amd64.tar.gz" -C /root || {
+        echo -e "${RED}Failed to extract Hemi Network files.${NC}"
         exit 1
-    fi
+    }
+    rm -f "heminetwork_${HEMI_VERSION}_linux_amd64.tar.gz"
 
-    echo "Removing archive..."
-    rm -rf "$FILENAME"
-
-    echo "Entering directory $DIRECTORY..."
-    cd "$DIRECTORY" || { echo "Directory $DIRECTORY does not exist."; exit 1; }
-
-    # Check and set permissions for keygen
-    if [ -f "keygen" ]; then
-        chmod +x "keygen"
-    else
-        echo "keygen file not found."
+    echo -e "${CYAN}Generating key...${NC}"
+    cd "$HEMI_DIR" || { echo -e "${RED}Directory not found: $HEMI_DIR${NC}"; exit 1; }
+    chmod +x keygen
+    ./keygen -secp256k1 -json -net="testnet" > "$ADDRESS_FILE" || {
+        echo -e "${RED}Failed to generate key.${NC}"
         exit 1
-    fi
-    
-    echo "Generating public key..."
-    ./keygen -secp256k1 -json -net="testnet" > "$OUTPUT_FILE"
+    }
 
-    echo "Public key generated. Output file: $OUTPUT_FILE"
-    echo "Displaying the contents of the key file..."
-    cat "$OUTPUT_FILE"
-
-    echo "Press any key to return to the main menu..."
+    echo -e "${GREEN}Key generation complete. Output file:${NC} $ADDRESS_FILE"
+    cat "$ADDRESS_FILE"
+    echo -e "${CYAN}Press any key to return to the main menu...${NC}"
     read -n 1 -s
 }
 
-# Run node function
+# Run Node
 run_node() {
-    DIRECTORY="$HOME/heminetwork_v0.5.0_linux_amd64"
+    echo -e "${CYAN}Starting Hemi Node...${NC}"
+    cd "$HEMI_DIR" || { echo -e "${RED}Directory not found: $HEMI_DIR${NC}"; exit 1; }
+    chmod 600 "$ADDRESS_FILE"
+    POPM_BTC_PRIVKEY=$(jq -r '.private_key' "$ADDRESS_FILE")
 
-    echo "Entering directory $DIRECTORY..."
-    cd "$DIRECTORY" || { echo "Directory $DIRECTORY does not exist."; exit 1; }
-
-    # Set popm-address.json file permissions to read-write
-    if [ -f "$HOME/popm-address.json" ]; then
-        echo "Setting permissions for popm-address.json file..."
-        chmod 600 "$HOME/popm-address.json"  # Read-write only for the current user
-    else
-        echo "$HOME/popm-address.json file does not exist."
-        exit 1
-    fi
-
-    # Display file contents
-    cat "$HOME/popm-address.json"
-
-    # Import private_key
-    POPM_BTC_PRIVKEY=$(jq -r '.private_key' "$HOME/popm-address.json")
-    read -p "Check the sats/vB value on https://mempool.space/testnet and input: " POPM_STATIC_FEE
-
+    read -p "Enter sats/vB value from https://mempool.space/testnet: " POPM_STATIC_FEE
     export POPM_BTC_PRIVKEY=$POPM_BTC_PRIVKEY
     export POPM_STATIC_FEE=$POPM_STATIC_FEE
     export POPM_BFG_URL="wss://testnet.rpc.hemi.network/v1/ws/public"
 
-    echo "Starting node..."
     pm2 start ./popmd --name popmd
     pm2 save
-
-    echo "Press any key to return to the main menu..."
+    echo -e "${GREEN}Node started successfully.${NC}"
+    echo -e "${CYAN}Press any key to return to the main menu...${NC}"
     read -n 1 -s
 }
 
-# Upgrade version function
-upgrade_version() {
-    URL="https://github.com/hemilabs/heminetwork/releases/download/v0.5.0/heminetwork_v0.5.0_linux_amd64.tar.gz"
-    FILENAME="heminetwork_v0.5.0_linux_amd64.tar.gz"
-    DIRECTORY="/root/heminetwork_v0.4.5_linux_amd64"
-    ADDRESS_FILE="$HOME/popm-address.json"
-    BACKUP_FILE="$HOME/popm-address.json.bak"
-
-    echo "Backing up address.json file..."
-    if [ -f "$ADDRESS_FILE" ]; then
-        cp "$ADDRESS_FILE" "$BACKUP_FILE"
-        echo "Backup completed: $BACKUP_FILE"
-    else
-        echo "address.json file not found, unable to backup."
-    fi
-
-    echo "Downloading new version $FILENAME..."
-    wget -q "$URL" -O "$FILENAME"
-
-    if [ $? -eq 0 ]; then
-        echo "Download completed."
-    else
-        echo "Download failed."
-        exit 1
-    fi
-
-    echo "Deleting old version directory..."
-    rm -rf "$DIRECTORY"
-
-    echo "Extracting new version..."
-    tar -xzf "$FILENAME" -C /root
-
-    if [ $? -eq 0 ]; then
-        echo "Extraction completed."
-    else
-        echo "Extraction failed."
-        exit 1
-    fi
-
-    echo "Removing archive..."
-    rm -rf "$FILENAME"
-
-    # Restore address.json file
-    if [ -f "$BACKUP_FILE" ]; then
-        cp "$BACKUP_FILE" "$ADDRESS_FILE"
-        echo "Restored address.json file: $ADDRESS_FILE"
-    else
-        echo "Backup file does not exist, unable to restore."
-    fi
-
-    echo "Version upgrade completed!"
-    echo "Press any key to return to the main menu..."
-    read -n 1 -s
-}
-
-# Backup address.json function
+# Backup Address File
 backup_address_json() {
-    ADDRESS_FILE="$HOME/popm-address.json"
-    BACKUP_FILE="$HOME/popm-address.json.bak"
+    echo -e "${CYAN}Backing up address file...${NC}"
+    cp "$ADDRESS_FILE" "$BACKUP_FILE" && {
+        echo -e "${GREEN}Backup completed: $BACKUP_FILE${NC}"
+    } || {
+        echo -e "${RED}Backup failed. File not found: $ADDRESS_FILE${NC}"
+    }
+    echo -e "${CYAN}Press any key to return to the main menu...${NC}"
+    read -n 1 -s
+}
 
-    echo "Backing up address.json file..."
-    if [ -f "$ADDRESS_FILE" ]; then
-        cp "$ADDRESS_FILE" "$BACKUP_FILE"
-        echo "Backup completed: $BACKUP_FILE"
-    else
-        echo "address.json file not found, unable to backup."
+# Import Wallet
+import_wallet() {
+    echo -e "${CYAN}Importing wallet from popm-address.json...${NC}"
+
+    # Check if the file exists
+    if [ ! -f "$ADDRESS_FILE" ]; then
+        echo -e "${RED}Error: File not found: $ADDRESS_FILE${NC}"
+        echo -e "${CYAN}Please ensure the file exists and try again.${NC}"
+        return
     fi
 
-    echo "Press any key to return to the main menu..."
+    # Validate and extract wallet details
+    local ethereum_address private_key public_key pubkey_hash network
+    ethereum_address=$(jq -r '.ethereum_address' "$ADDRESS_FILE")
+    private_key=$(jq -r '.private_key' "$ADDRESS_FILE")
+    public_key=$(jq -r '.public_key' "$ADDRESS_FILE")
+    pubkey_hash=$(jq -r '.pubkey_hash' "$ADDRESS_FILE")
+    network=$(jq -r '.network' "$ADDRESS_FILE")
+
+    # Validate extracted fields
+    if [[ "$ethereum_address" == "null" || "$private_key" == "null" || "$public_key" == "null" || "$pubkey_hash" == "null" || "$network" == "null" ]]; then
+        echo -e "${RED}Error: Invalid wallet file format. Ensure all required fields are present.${NC}"
+        return
+    fi
+
+    # Display imported wallet details
+    echo -e "${GREEN}Wallet successfully imported!${NC}"
+    echo -e "${YELLOW}Ethereum Address:${NC} $ethereum_address"
+    echo -e "${YELLOW}Network:${NC} $network"
+    echo -e "${YELLOW}Private Key:${NC} $private_key"
+    echo -e "${YELLOW}Public Key:${NC} $public_key"
+    echo -e "${YELLOW}Pubkey Hash:${NC} $pubkey_hash"
+
+    # Optional: Export variables if needed for further usage
+    export ETHEREUM_ADDRESS=$ethereum_address
+    export PRIVATE_KEY=$private_key
+    export PUBLIC_KEY=$public_key
+    export PUBKEY_HASH=$pubkey_hash
+    export NETWORK=$network
+
+    echo -e "${CYAN}Press any key to return to the main menu...${NC}"
     read -n 1 -s
 }
 
@@ -268,49 +210,35 @@ view_logs() {
     read -n 1 -s
 }
 
-# Main menu function
+# Main Menu
 main_menu() {
     while true; do
         clear
-        echo "Script and tutorial written by Telegram user @rmndkyl, free and open source, do not believe in paid versions"
-        echo "============================ Hemi Pop Miner Installation ===================================="
-        echo "Node community Telegram channel: https://t.me/layerairdrop"
-        echo "Node community Telegram group: https://t.me/layerairdropdiskusi"
-        echo "To exit the script, press ctrl + C on the keyboard to exit."
-        echo "Please select an operation to perform:"
-        echo "1) Generate Key"
-        echo "2) Run Node"
-        echo "3) Upgrade Version (0.4.5)"
-        echo "4) Backup address.json"
-        echo "5) View Logs"
-        echo "6) Exit"
+        echo -e "${CYAN}Script and tutorial written by Telegram user @rmndkyl, free and open source, do not believe in paid versions${NC}"
+        echo -e "${CYAN}============================ Hemi Pop Miner Installation ====================================${NC}"
+        echo -e "${CYAN}Node community Telegram channel: https://t.me/layerairdrop${NC}"
+        echo -e "${CYAN}Node community Telegram group: https://t.me/layerairdropdiskusi${NC}"
+        echo -e "${CYAN}To exit the script, press ctrl + C on the keyboard to exit.${NC}"
+        echo -e "${CYAN}Please select an operation to perform:${NC}"
+        echo -e "${YELLOW}1) Generate Key/Wallet${NC}"
+        echo -e "${YELLOW}2) Run Node${NC}"
+        echo -e "${YELLOW}3) Backup/Export Wallet${NC}"
+		echo -e "${YELLOW}4) Import Wallet${NC}"
+		echo -e "${YELLOW}5) View Logs${NC}"
+        echo -e "${YELLOW}6) Exit${NC}"
         read -p "Choose an option: " choice
 
         case $choice in
-            1)
-                generate_key
-                ;;
-            2)
-                run_node
-                ;;
-            3)
-                upgrade_version
-                ;;
-            4)
-                backup_address_json
-                ;;
-            5)
-                view_logs
-                ;;
-            6)
-                exit 0
-                ;;
-            *)
-                echo "Invalid option, please choose again."
-                ;;
+            1) generate_key ;;
+            2) run_node ;;
+            3) backup_address_json ;;
+			4) import_wallet ;;
+			5) view_logs ;;
+            6) exit 0 ;;
+            *) echo -e "${RED}Invalid option. Please try again.${NC}" ;;
         esac
     done
 }
 
-# Start the main menu
+# Start Script
 main_menu
