@@ -8,7 +8,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Dynamic Variables
-HEMI_VERSION="v0.5.0"
+HEMI_VERSION="v0.7.0"
 HEMI_URL="https://github.com/hemilabs/heminetwork/releases/download/$HEMI_VERSION/heminetwork_${HEMI_VERSION}_linux_amd64.tar.gz"
 HEMI_DIR="/root/heminetwork_${HEMI_VERSION}_linux_amd64"
 ADDRESS_FILE="$HOME/popm-address.json"
@@ -206,7 +206,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Dynamic Variables
-HEMI_VERSION="v0.5.0"
+HEMI_VERSION="v0.7.0"
 HEMI_URL="https://github.com/hemilabs/heminetwork/releases/download/$HEMI_VERSION/heminetwork_${HEMI_VERSION}_linux_amd64.tar.gz"
 HEMI_DIR="/root/heminetwork_${HEMI_VERSION}_linux_amd64"
 ADDRESS_FILE="$HOME/popm-address.json"
@@ -398,7 +398,7 @@ import_wallet() {
 view_logs() {
     echo -e "${CYAN}Checking for logs directory and PM2 logs...${NC}"
 
-    DIRECTORY="$HOME/heminetwork_v0.5.0_linux_amd64"  # Updated to reflect version 0.5.0
+    DIRECTORY="$HOME/heminetwork_v0.7.0_linux_amd64"  # Updated to reflect version 0.7.0
 
     # Check if the directory exists
     if [ ! -d "$DIRECTORY" ]; then
@@ -450,39 +450,6 @@ main_menu() {
         echo -e "${YELLOW}1) Generate Key/Wallet${NC}"
         echo -e "${YELLOW}2) Run Node${NC}"
         echo -e "${YELLOW}3) Backup/Export Wallet${NC}"
-		echo -e "${YELLOW}4) Import Wallet${NC}"
-		echo -e "${YELLOW}5) View Logs${NC}"
-        echo -e "${YELLOW}6) Exit${NC}"
-        read -p "Choose an option: " choice
-
-        case $choice in
-            1) generate_key ;;
-            2) run_node ;;
-            3) backup_address_json ;;
-			4) import_wallet ;;
-			5) view_logs ;;
-            6) exit 0 ;;
-            *) echo -e "${RED}Invalid option. Please try again.${NC}" ;;
-        esac
-    done
-}
-
-# Start Script
-main_menu
-
-# Main Menu
-main_menu() {
-    while true; do
-        clear
-        echo -e "${CYAN}Script and tutorial written by Telegram user @rmndkyl, free and open source, do not believe in paid versions${NC}"
-        echo -e "${CYAN}============================ Hemi Pop Miner Installation ====================================${NC}"
-        echo -e "${CYAN}Node community Telegram channel: https://t.me/layerairdrop${NC}"
-        echo -e "${CYAN}Node community Telegram group: https://t.me/layerairdropdiskusi${NC}"
-        echo -e "${CYAN}To exit the script, press ctrl + C on the keyboard to exit.${NC}"
-        echo -e "${CYAN}Please select an operation to perform:${NC}"
-        echo -e "${YELLOW}1) Generate Key/Wallet${NC}"
-        echo -e "${YELLOW}2) Run Node${NC}"
-        echo -e "${YELLOW}3) Backup/Export Wallet${NC}"
 	echo -e "${YELLOW}4) Import Wallet${NC}"
 	echo -e "${YELLOW}5) View Logs${NC}"
         echo -e "${YELLOW}6) Exit${NC}"
@@ -492,8 +459,8 @@ main_menu() {
             1) generate_key ;;
             2) run_node ;;
             3) backup_address_json ;;
-			4) import_wallet ;;
-			5) view_logs ;;
+	    4) import_wallet ;;
+     	    5) view_logs ;;
             6) exit 0 ;;
             *) echo -e "${RED}Invalid option. Please try again.${NC}" ;;
         esac
