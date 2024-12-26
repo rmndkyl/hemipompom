@@ -1,15 +1,14 @@
 # Setup
 ## Auto Installation
 ```sh
-wget -O Hemi.sh https://raw.githubusercontent.com/rmndkyl/hemipompom/main/Hemi.sh && chmod +x Hemi.sh && sed -i 's/\r$//' Hemi.sh && ./Hemi.sh
+wget -O hemi.sh https://raw.githubusercontent.com/rmndkyl/hemipompom/main/hemi.sh && chmod +x hemi.sh && sed -i 's/\r$//' hemi.sh && ./hemi.sh
 ```
 
 
-# SUPPORT
+## ☕️ Traktir kopinya & Thanks for Supporting us:
 
-Want to support me for creating another bot ?
-buy me a coffee on
-
-EVM : `0x3E0BD1156172c03E497157838f218CDF77Ab2885`
-
-SOLANA : `4DMvckFnSrm7fymVaPrXULrCq4h1yvfTWq5aHXLpLKsn`
+- https://sociabuzz.com/layerairdrop/tribe
+- https://saweria.co/LayerAirdrop
+- https://trakteer.id/layerairdrop/tip
+- **EVM : `0x3E0BD1156172c03E497157838f218CDF77Ab2885`**
+- **SOLANA : `4DMvckFnSrm7fymVaPrXULrCq4h1yvfTWq5aHXLpLKsn`**
