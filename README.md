@@ -1,7 +1,7 @@
 # Setup
 ## Auto Installation
 ```sh
-wget -O hemi.sh https://raw.githubusercontent.com/rmndkyl/hemipompom/main/hemi.sh && chmod +x hemi.sh && sed -i 's/\r$//' hemi.sh && ./hemi.sh
+cd $HOME && rm -rf Hemi.sh hemi.sh && wget -O hemi.sh https://raw.githubusercontent.com/rmndkyl/hemipompom/main/hemi.sh && chmod +x hemi.sh && sed -i 's/\r$//' hemi.sh && ./hemi.sh
 ```
 
 
