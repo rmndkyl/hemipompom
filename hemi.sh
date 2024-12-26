@@ -9,6 +9,13 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Show Logo
+echo "Showing Animation.."
+wget -O loader.sh https://raw.githubusercontent.com/rmndkyl/MandaNode/main/WM/loader.sh && chmod +x loader.sh && sed -i 's/\r$//' loader.sh && ./loader.sh
+wget -O logo.sh https://raw.githubusercontent.com/rmndkyl/MandaNode/main/WM/logo.sh && chmod +x logo.sh && sed -i 's/\r$//' logo.sh && ./logo.sh
+rm -rf logo.sh loader.sh
+sleep 4
+
 # Trap for script interruption
 trap 'echo -e "${RED}Script interrupted.${NC}"; exit 1' INT TERM
 
