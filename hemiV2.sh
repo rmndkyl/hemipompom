@@ -28,15 +28,44 @@ setup_node() {
     print_info "Updating system and installing jq..."
     sudo apt-get update && sudo apt-get install -y jq
 
+    print_info "Checking for existing heminetwork installation..."
+    if [ -d "/root/hemi/heminetwork_v0.11.5_linux_amd64" ]; then
+        read -p "Existing installation found. Do you want to remove it and reinstall? (y/n): " reinstall
+        if [[ "$reinstall" =~ ^[Yy]$ ]]; then
+            print_info "Removing existing installation..."
+            rm -rf /root/hemi/heminetwork_v0.11.5_linux_amd64
+            rm -f /root/hemi/heminetwork_v0.11.5_linux_amd64.tar.gz
+        else
+            print_info "Using existing installation."
+            cd /root/hemi/heminetwork_v0.11.5_linux_amd64 || { print_error "Failed to change directory to existing installation"; exit 1; }
+            print_info "Node setup completed successfully!"
+            node_menu
+            return
+        fi
+    fi
+
     print_info "Creating directory /root/hemi..."
     mkdir -p /root/hemi
     cd /root/hemi || { print_error "Failed to change directory to /root/hemi"; exit 1; }
 
-    print_info "Downloading heminetwork..."
-    wget --quiet --show-progress https://github.com/hemilabs/heminetwork/releases/download/v0.11.5/heminetwork_v0.11.5_linux_amd64.tar.gz -O heminetwork_v0.11.5_linux_amd64.tar.gz
-    if [ $? -ne 0 ]; then
-        print_error "Failed to download heminetwork."
-        exit 1
+    # Check for existing archive
+    if [ -f "heminetwork_v0.11.5_linux_amd64.tar.gz" ]; then
+        read -p "Existing archive found. Download again? (y/n): " redownload
+        if [[ "$redownload" =~ ^[Yy]$ ]]; then
+            rm -f heminetwork_v0.11.5_linux_amd64.tar.gz
+        else
+            print_info "Using existing archive."
+        fi
+    fi
+
+    # Download if needed
+    if [ ! -f "heminetwork_v0.11.5_linux_amd64.tar.gz" ]; then
+        print_info "Downloading heminetwork..."
+        wget --quiet --show-progress https://github.com/hemilabs/heminetwork/releases/download/v0.11.5/heminetwork_v0.11.5_linux_amd64.tar.gz -O heminetwork_v0.11.5_linux_amd64.tar.gz
+        if [ $? -ne 0 ]; then
+            print_error "Failed to download heminetwork."
+            exit 1
+        fi
     fi
 
     print_info "Extracting heminetwork..."
